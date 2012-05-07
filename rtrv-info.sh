@@ -28,6 +28,10 @@ DELL_WARR_TOOL="./dell-warr-expires.py"
 #
 CNAME_TOOL="./getCNAMEs.py"
 
+# reports a simplified list of yum repos configured on a server
+YUM_REPO_TOOL="./get-yum-repos.sh"
+
+
 # dmidecode
 # cat /proc/meminfo
 # cat /etc/redhat-release
@@ -159,13 +163,14 @@ function rtrv_mem_info {
 # OS 
 #
 
-# associative array, keyed on "'brand', 'product', 'ver', 'arch'
+# associative array, keyed on "'brand', 'product', 'ver', 'arch', 'yumrepos'
 declare -A OS
 
 function rtrv_os_info {
 
   RHREL=$(ssh root@$SERVER cat /etc/redhat-release)
   LARCH=$(ssh root@$SERVER uname -m)
+  REPOS=$($YUM_REPO_TOOL $SERVER)
   
 
   OS['brand']="Unknown"
@@ -185,6 +190,8 @@ function rtrv_os_info {
   OS['ver']=$(echo "$RHREL" | sed -e "s/[a-zA-Z()]//g" -e "s/\([0-9]\) *\([0-9]\)/\1.\2/" -e "s/^ *//" -e "s/ *$//" )
 
   OS['arch']=$LARCH
+
+  OS['yumrepos']=$REPOS
 
 }
 

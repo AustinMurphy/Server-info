@@ -48,14 +48,6 @@ RTRVINFO="./rtrv-info.sh"
  
  
 #
-# FOSwiki  - section header
-#
-
-echo "---++ Key info"
-
-
-
-#
 # Base info - display
 #
 
@@ -91,7 +83,7 @@ function display_base_info {
   echo "   * Memory: ${MEM['totmb']} MB Available, ${MEM['nummods']} x ${MEM['modsize']} Modules Installed, ${MEM['max']} Max "
 
   # OS
-  echo "   * OS: ${OS['brand']} ${OS['product']} ${OS['ver']} (${OS['arch']})"
+  echo "   * OS: ${OS['brand']} ${OS['product']} ${OS['ver']} (${OS['arch']}), Repos: ${OS['yumrepos']}"
 
   echo ""
   
@@ -169,7 +161,12 @@ function display_mount_info {
 }
 
 
+
+#
 # Control what to display
+#
+
+echo "---++ Key info"
 
 display_base_info
 display_network_info
