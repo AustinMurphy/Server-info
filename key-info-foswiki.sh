@@ -54,9 +54,6 @@ RTRVINFO="./rtrv-info.sh"
 function display_base_info {
 
   rtrv_platform_info
-  rtrv_cpu_info
-  rtrv_mem_info
-  rtrv_os_info
 
   # format for FOSwiki
   # FOSwiki makes wikilinks out of CamelCase.  DO NOT WANT
@@ -76,11 +73,20 @@ function display_base_info {
     echo  ""
   fi
 
+
+  rtrv_cpu_info
+
   # CPU
   echo "   * CPU(s): ${CPUS['num']} x ${CPUS['manf']} ${CPUS['fam']} @ ${CPUS['freq']} CPU(s) Installed,  ${CPUS['numfree']} CPU socket(s) open"
 
+
+  rtrv_mem_info
+
   # memory
   echo "   * Memory: ${MEM['totmb']} MB Available, ${MEM['nummods']} x ${MEM['modsize']} Modules Installed, ${MEM['max']} Max "
+
+
+  rtrv_os_info
 
   # OS
   echo "   * OS: ${OS['brand']} ${OS['product']} ${OS['ver']} (${OS['arch']}), Repos: ${OS['yumrepos']}"

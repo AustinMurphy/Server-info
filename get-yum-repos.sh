@@ -28,7 +28,7 @@ else
     
     # Filtered list of repos
     FILTEREDREPOS=$( echo "$REPOS" | \
-        grep -E -v "debug|source|testing" | \
+        grep -E -v "debug|source|testing|extras" | \
         sed -e "s/-i386-server//" \
             -e "s/-x86_64-server//" \
             -e "s/-5$//" \
