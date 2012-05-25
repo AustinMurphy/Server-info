@@ -53,6 +53,11 @@ RTRVINFO="./rtrv-info.sh"
 
 function display_base_info {
 
+  rtrv_name_info
+
+  # Name
+  echo "   * Name: $SVRNAME, Domain: $SVRDOMAIN"
+
   rtrv_platform_info
 
   # format for FOSwiki

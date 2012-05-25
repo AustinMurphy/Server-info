@@ -20,4 +20,6 @@ Sysadmin Tools -- Server information
     each ip and hostname must only appear once
 
 
+Note: Requires bash 4 for the associative array feature.
+      (FYI - RHEL5 comes with bash 3)
 

@@ -13,9 +13,25 @@ then
   exit 1
 fi
 
+#
+# Allow local or remote servers as root or with sudo
+#
+if [[ "$SERVER" == "-l" || "$SERVER" == "localhost" ]]
+then
+  if [[ "$UID" -eq 0 ]]
+  then
+    SSHCMD=""
+  else
+    echo "ERROR -- This script requires root privileges. "
+    exit
+  fi
+else
+  SSHCMD="ssh root@$SERVER "
+fi
+
 
 #  Full command output
-YUMREPOALL=$(ssh root@$SERVER yum repolist all 2>/dev/null )
+YUMREPOALL=$( $SSHCMD yum repolist all 2>/dev/null )
 if [ $? -ne 0 ] 
 then
     echo "not applicable"
