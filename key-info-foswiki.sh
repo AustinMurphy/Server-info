@@ -6,10 +6,15 @@
 #
 
 #
-#  This version of the script calls out to a subscript for the base info sub section and the cname list
+#  This version of the script calls out to a subscript to retrieve the data
 #
 #
 #
+
+
+# do we want the data to come from the sqlite DB or from the remote server?
+DATASOURCE="SQLITE"
+
 
 SERVER=$1
 
@@ -22,18 +27,21 @@ fi
 RUNDATE=$(date +%s)
 
 
-
 #
 # retrieve info about the server
 #
 
-RTRVINFO="./rtrv-info.sh"
+if [[ $DATASOURCE -eq "SQLITE" ]] 
+then
+  RTRVINFO="./query-info.sh"
+else
+  RTRVINFO="./rtrv-info.sh"
+fi
 
-# just source the rtrv-info.sh script
-#  sets a handful of associative arrays
+# source the rtrv-info.sh script
 . $RTRVINFO  
 
-
+#  the rtrv_* functions set a handful of associative arrays
 
 
 

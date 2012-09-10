@@ -13,9 +13,7 @@ Sysadmin Tools -- Server information
   Data collection is separated from wiki formatting.
 
   Some of the parts make simplifying assumptions that could be wrong.
-  - cpus are assumed to be identical
-  - memory modules are assumed to be identical size
-
+  - cpus and memory modules are assumed to be identical
   - network interfaces must be documented in /etc/hosts
     each ip and hostname must only appear once
 

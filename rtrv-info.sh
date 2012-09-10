@@ -74,7 +74,7 @@ SVRNAME=""
 SVRDOMAIN=""
 
 function rtrv_name_info {
-  SVRNAME=$( $SSHCMD hostname)
+  SVRNAME=$( $SSHCMD hostname -s)
   SVRDOMAIN=$( $SSHCMD hostname -d)
 
 }
