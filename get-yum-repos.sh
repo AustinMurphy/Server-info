@@ -39,7 +39,7 @@ else
   
     #  Full list of actual repos
     REPOS=$(echo "$YUMREPOALL" | \
-        grep -v -E "^repo|^Loaded|^Updat" | \
+        grep -v -E "^repo|^Loaded|^Updat|^This system" | \
         awk '{print $1}' )
     
     # Filtered list of repos

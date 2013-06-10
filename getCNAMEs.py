@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 #                          13 December 2010 - Austin Murphy
 #  

@@ -13,7 +13,8 @@
 
 
 # do we want the data to come from the sqlite DB or from the remote server?
-DATASOURCE="SQLITE"
+#DATASOURCE="SQLITE"
+DATASOURCE="SERVER"
 
 
 SERVER=$1
@@ -31,12 +32,14 @@ RUNDATE=$(date +%s)
 # retrieve info about the server
 #
 
-if [[ $DATASOURCE -eq "SQLITE" ]] 
-then
-  RTRVINFO="./query-info.sh"
-else
+#echo "Datasource: $DATASOURCE"
+#
+#if [[ $DATASOURCE -eq "SQLITE" ]] 
+#then
+#  RTRVINFO="./query-info.sh"
+#else
   RTRVINFO="./rtrv-info.sh"
-fi
+#fi
 
 # source the rtrv-info.sh script
 . $RTRVINFO  

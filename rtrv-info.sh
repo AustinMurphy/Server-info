@@ -34,7 +34,7 @@ YUM_REPO_TOOL="./get-yum-repos.sh"
 
 # dmidecode
 # cat /proc/meminfo
-# cat /etc/redhat-release
+# cat /etc/redhat-release  OR  cat /etc/debian_version
 # uname -a
 # ifconfig -a
 # dig
@@ -203,6 +203,9 @@ declare -A OS
 
 function rtrv_os_info {
 
+  # Future fun ...
+  #DEBVER=$( $SSHCMD cat /etc/debian_version 2> /dev/null)
+ 
   RHREL=$( $SSHCMD cat /etc/redhat-release 2> /dev/null)
   LARCH=$( $SSHCMD uname -m)
   REPOS=$($YUM_REPO_TOOL $SERVER)
@@ -349,7 +352,7 @@ declare -A FSTYPES
 
 function rtrv_mount_info {
  
-  DFOUT=$( $SSHCMD df -Ph -x tmpfs | grep -v "Filesystem" )
+  DFOUT=$( $SSHCMD df -Ph -x tmpfs -x devtmpfs -x rootfs | grep -v "Filesystem" )
   MOUNTOUT=$( $SSHCMD mount )
 
   MOUNTPTS=$( echo "$DFOUT" | awk '{ print $6; }' )
