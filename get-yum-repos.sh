@@ -39,13 +39,14 @@ else
   
     #  Full list of actual repos
     REPOS=$(echo "$YUMREPOALL" | \
-        grep -v -E "^repo|^Loaded|^Updat|^This system" | \
+        grep -v -E "^repo|^Load|^Updat|^This system|^ \*" | \
         awk '{print $1}' )
     
     # Filtered list of repos
     FILTEREDREPOS=$( echo "$REPOS" | \
         grep -E -v "debug|source|testing|extras" | \
-        sed -e "s/-i386-server//" \
+        sed -e  "s/^C[[:digit:]]\.[[:digit:]]-//" \
+            -e "s/-i386-server//" \
             -e "s/-x86_64-server//" \
             -e "s/-5$//" \
             -e "s/-indep$//" \
