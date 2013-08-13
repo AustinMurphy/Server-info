@@ -49,14 +49,32 @@ if [[ "$SERVER" == "-l" || "$SERVER" == "localhost" ]]
 then
   if [[ "$UID" -eq 0 ]]
   then
-    SSHCMD=""
+    #SSHCMD=""
+    function ssh_cmd () {
+      ${1}
+    }
   else
     echo "ERROR -- This script requires root privileges. "
     exit
   fi
 else
-  SSHCMD="ssh root@$SERVER "
+  # old syntax - couldn't deal with spaces in ssh command - bash advice is to use a function
+  #SSHCMD="ssh root@$SERVER "
+
+  # SSHOPTS=(-o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 5")
+
+  function ssh_cmd () {
+    ssh -o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 15"  root@$SERVER  ${1}
+  }
 fi
+
+# example usage:
+#SVRNAME=$( ssh_cmd "hostname -s" )
+#SVRDOM=$( ssh_cmd "hostname -d" )
+
+
+#exit
+
 
  
 ##############################################
@@ -74,9 +92,16 @@ SVRNAME=""
 SVRDOMAIN=""
 
 function rtrv_name_info {
-  SVRNAME=$( $SSHCMD hostname -s)
-  SVRDOMAIN=$( $SSHCMD hostname -d)
-
+  # old syntax - couldn't deal with spaces in ssh command - bash advice is to use a function
+  #SVRNAME=$( $SSHCMD hostname -s )
+  #SVRDOMAIN="$( $SSHCMD hostname -d)"
+  # This syntax works... maybe I should change to a function
+  SVRNAME=$(ssh "${SSHOPTS[@]}" root@$SERVER  hostname -s )
+  # 
+  #  This is nice
+  SVRNAME=$( ssh_cmd "hostname -s" )
+  SVRDOMAIN=$( ssh_cmd "hostname -d" )
+ 
 }
 
 
@@ -90,17 +115,17 @@ declare -A PLATFORM
 function rtrv_platform_info {
   
   # I would like to use just this first cmd, but it is easier to parse the versions with the -s flags)
-  DMIDECODE=$( $SSHCMD dmidecode )
+  DMIDECODE=$( ssh_cmd "dmidecode" )
   #
   #  NOTE: The -s switches to dmidecode do NOT work with the default RHEL 4 or 5 versions of dmidecode 
   #        updated versions of kernel-utils (rhel4) and dmidecode (rhel5) are available
   #                         
-  DMI_MANF=$( $SSHCMD dmidecode -s system-manufacturer)
-  DMI_PROD=$( $SSHCMD dmidecode -s system-product-name)
-  DMI_BIOS=$( $SSHCMD dmidecode -s bios-version)
-  DMI_SERIAL=$( $SSHCMD dmidecode -s system-serial-number)
+  DMI_MANF=$( ssh_cmd "dmidecode -s system-manufacturer")
+  DMI_PROD=$( ssh_cmd "dmidecode -s system-product-name")
+  DMI_BIOS=$( ssh_cmd "dmidecode -s bios-version")
+  DMI_SERIAL=$( ssh_cmd "dmidecode -s system-serial-number")
 
-  PLATFORM['manf']=$(echo "$DMI_MANF" | sed -e "s/ Inc.//" -e "s/ Computer Corporation//" -e "s/,//" -e "s/System Manufacturer/Generic/")
+  PLATFORM['manf']=$(echo "$DMI_MANF" | sed -e "s/ Inc.//" -e "s/ Computer Corporation//" -e "s/,//" -e "s/System Manufacturer/Generic/" -e "s/ Corporation//" )
   PLATFORM['product']=$(echo "$DMI_PROD" | sed -e "s/VMware Virtual Platform/Virtual Machine/" -e "s/System Product Name/Server/" -e "s/ *$//")
   PLATFORM['fwver']=$DMI_BIOS
   PLATFORM['serial']=$(echo "$DMI_SERIAL" | sed -e "s/System Serial Number/---/" -e "s/^ *//" -e "s/ *$//")
@@ -117,7 +142,6 @@ function rtrv_platform_info {
   fi
   
 
-  # TODO:  check for  /etc/debian_version
 
 }
 
@@ -133,7 +157,7 @@ declare -A CPUS
 
 function rtrv_cpu_info {
 
-  DMIDECODE_CPU=$( $SSHCMD dmidecode -s processor-version )
+  DMIDECODE_CPU=$( ssh_cmd "dmidecode -s processor-version" )
   
   # accomidate older CPU info
   echo "$DMIDECODE_CPU" | grep -q '@'
@@ -154,9 +178,9 @@ function rtrv_cpu_info {
     # assumes that all procs are the same
     # processor-version does not include good info (VMs, old hardware)
 
-    DMI_PROC_MANF=$( $SSHCMD dmidecode -s processor-manufacturer | sed -e "s/ *$//")
-    DMI_PROC_FAM=$(  $SSHCMD dmidecode -s processor-family       | sed -e "s/ *$//")
-    DMI_PROC_FREQ=$( $SSHCMD dmidecode -s processor-frequency    | sed -e "s/ *$//")
+    DMI_PROC_MANF=$( ssh_cmd "dmidecode -s processor-manufacturer | sed -e \"s/ *$//\"")
+    DMI_PROC_FAM=$(  ssh_cmd "dmidecode -s processor-family       | sed -e \"s/ *$//\"")
+    DMI_PROC_FREQ=$( ssh_cmd "dmidecode -s processor-frequency    | sed -e \"s/ *$//\"")
  
     CPUS['num']=$(echo "$DMI_PROC_MANF" | grep -E -v '00000000|Not Spec' | wc -l)
     NUMTOTAL=$(echo "$DMIDECODE" | grep "Socket Designation" | grep -E "CPU|PROC" | wc -l)
@@ -187,7 +211,7 @@ function rtrv_mem_info {
   MEM['nummods']=$(echo "$DMIDECODE" | grep "^\s*Size.*B" | wc -l )
   MEM['modsize']=$(echo "$DMIDECODE" | grep "^\s*Size.*B" | sed -e "s/^.*: //" | head -n 1)
   MEM['max']=$(echo "$DMIDECODE" | grep "Maximum Capacity" | sed -e "s/^.*: //" )
-  MEMTOTKB=$( $SSHCMD cat /proc/meminfo | grep "MemTotal" | awk '{print $2}' )
+  MEMTOTKB=$( ssh_cmd "cat /proc/meminfo | grep 'MemTotal' | awk '{print \$2}' " )
   MEM['totmb']=$(echo "$MEMTOTKB/1024" | bc)
   
 
@@ -204,10 +228,13 @@ declare -A OS
 function rtrv_os_info {
 
   # Future fun ...
-  #DEBVER=$( $SSHCMD cat /etc/debian_version 2> /dev/null)
+  #DEBVER=$( ssh_cmd "cat /etc/debian_version 2> /dev/null")
+
+  # TODO:  check for  /etc/debian_version
  
-  RHREL=$( $SSHCMD cat /etc/redhat-release 2> /dev/null)
-  LARCH=$( $SSHCMD uname -m)
+  ORAREL=$( ssh_cmd "cat /etc/oracle-release 2> /dev/null")
+  RHREL=$( ssh_cmd "cat /etc/redhat-release 2> /dev/null")
+  LARCH=$( ssh_cmd "uname -m")
   REPOS=$($YUM_REPO_TOOL $SERVER)
   
 
@@ -221,6 +248,12 @@ function rtrv_os_info {
   if  [ $? == '0' ]
   then
     OS['brand']="CentOS"
+  fi
+  # Oracle Enterpise Linux has both a redhat-relase file and an oracle-release file
+  echo "$ORAREL" | grep -q "Oracle Linux Server" 
+  if  [ $? == '0' ]
+  then
+    OS['brand']="OEL"
   fi
 
   OS['product']=$(echo "$RHREL" | sed -e "s/Red Hat Enterprise Linux//" -e "s/CentOS/Linux/" -e "s/release.*$//" -e "s/  / /g" -e "s/^ *//" -e "s/ *$//")
@@ -249,8 +282,8 @@ DNSLIST=""
 
 function rtrv_network_info {
 
-  REMETCHOSTS=$( $SSHCMD cat /etc/hosts)
-  REMIFCONFIG=$( $SSHCMD /sbin/ifconfig -a)
+  REMETCHOSTS=$( ssh_cmd "cat /etc/hosts")
+  REMIFCONFIG=$( ssh_cmd "/sbin/ifconfig -a")
 
   IFACES=$(echo "$REMIFCONFIG" |  grep 'HWaddr' | awk '{print $1}' )
   
@@ -259,13 +292,13 @@ function rtrv_network_info {
 
     # iface --> mac
     #
-    MAC=$(echo "$REMIFCONFIG" | grep "$IFACE " | sed -e "s/^.*HWaddr //" | sed -e "s/ *$//")
+    MAC=$(echo "$REMIFCONFIG" | grep "^$IFACE " | sed -e "s/^.*HWaddr //" | sed -e "s/ *$//")
     MACS[$IFACE]="$MAC"
 
     
     # iface --> privip  
     #
-    PRIVIP=$(echo "$REMIFCONFIG" | grep -A1 "$IFACE " | tail -n1 | grep -v 'inet6' | sed -e "s/^.*addr://" -e "s/  .*$//")
+    PRIVIP=$(echo "$REMIFCONFIG" | grep -A1 "^$IFACE " | tail -n1 | grep -v 'inet6' | sed -e "s/^.*addr://" -e "s/  .*$//")
     if [ "$PRIVIP" == "" ] 
     then
       PRIVIP="--"
@@ -281,9 +314,10 @@ function rtrv_network_info {
     then
        DNSNAME="--"  
     else
-      DNSNAME=$(echo "$REMETCHOSTS" |  grep "^$PRIVIP" | awk '{print $2}')
+      DNSNAME=$(echo "$REMETCHOSTS" |  grep "^$PRIVIP" | head -n 1 | awk '{print $2}')
       N=$(echo "$REMETCHOSTS" |  grep "^$PRIVIP" | wc -l)
-      [[ "$N" -eq 0 ]] && DNSNAME=$(echo "$REMETCHOSTS" |  grep "^#*$PRIVIP" | awk '{print $2}' | head -n1 )
+      #  maybe the IP is commented out
+      [[ "$N" -eq 0 ]] && DNSNAME=$(echo "$REMETCHOSTS" |  grep "^#*$PRIVIP" | head -n 1 | awk '{print $2}' )
       DNSLIST="$DNSLIST $DNSNAME"
     fi
     DNSNAMES[$IFACE]="$DNSNAME"
@@ -352,8 +386,8 @@ declare -A FSTYPES
 
 function rtrv_mount_info {
  
-  DFOUT=$( $SSHCMD df -Ph -x tmpfs -x devtmpfs -x rootfs | grep -v "Filesystem" )
-  MOUNTOUT=$( $SSHCMD mount )
+  DFOUT=$( ssh_cmd "df -Ph -x tmpfs -x devtmpfs -x rootfs | grep -v \"Filesystem\" ")
+  MOUNTOUT=$( ssh_cmd "mount" )
 
   MOUNTPTS=$( echo "$DFOUT" | awk '{ print $6; }' )
   for m in $MOUNTPTS

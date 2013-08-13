@@ -20,18 +20,25 @@ if [[ "$SERVER" == "-l" || "$SERVER" == "localhost" ]]
 then
   if [[ "$UID" -eq 0 ]]
   then
-    SSHCMD=""
+    #SSHCMD=""
+    function ssh_cmd () {
+      ${1}
+    }
   else
     echo "ERROR -- This script requires root privileges. "
     exit
   fi
 else
-  SSHCMD="ssh root@$SERVER "
+  #SSHCMD="ssh root@$SERVER "
+  function ssh_cmd () {
+    ssh -o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 15"  root@$SERVER  ${1}
+  }
 fi
 
 
 #  Full command output
-YUMREPOALL=$( $SSHCMD yum repolist all 2>/dev/null )
+#YUMREPOALL=$( $SSHCMD yum repolist all 2>/dev/null )
+YUMREPOALL=$( ssh_cmd "yum repolist all 2>/dev/null" )
 if [ $? -ne 0 ] 
 then
     echo "not applicable"
@@ -48,6 +55,7 @@ else
         sed -e  "s/^C[[:digit:]]\.[[:digit:]]-//" \
             -e "s/-i386-server//" \
             -e "s/-x86_64-server//" \
+            -e "s/_x86_64_latest//" \
             -e "s/-5$//" \
             -e "s/-indep$//" \
             -e "s/-specific//" \
