@@ -210,7 +210,7 @@ function rtrv_mem_info {
   #
   MEM['nummods']=$(echo "$DMIDECODE" | grep "^\s*Size.*B" | wc -l )
   MEM['modsize']=$(echo "$DMIDECODE" | grep "^\s*Size.*B" | sed -e "s/^.*: //" | head -n 1)
-  MEM['max']=$(echo "$DMIDECODE" | grep "Maximum Capacity" | sed -e "s/^.*: //" )
+  MEM['max']=$(echo "$DMIDECODE" | grep "Maximum Capacity" | sed -e "s/^.*: //" | tr '\n' '+' | sed -e 's/+$//' -e 's/+/ + /' )
   MEMTOTKB=$( ssh_cmd "cat /proc/meminfo | grep 'MemTotal' | awk '{print \$2}' " )
   MEM['totmb']=$(echo "$MEMTOTKB/1024" | bc)
   
