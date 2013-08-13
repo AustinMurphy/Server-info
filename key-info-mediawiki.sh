@@ -216,7 +216,7 @@ echo "== Key info =="
 
 display_base_info
 display_network_info
-display_cname_info
+#display_cname_info
 display_mount_info
 
 

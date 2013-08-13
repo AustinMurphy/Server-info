@@ -6,15 +6,16 @@ DONE
     Instead of formatting the data for a wiki, load it into a SQLite DB
  - SQLite extractor
     Instead of retrieving the data from the server, extract it from the SQLite DB
+ - mediawiki formatter
+    Instead of formatting for FOSwiki, format for MediaWiki
 
 
 TODO
 
- - mediawiki formatter
-    Instead of formatting for FOSwiki, format for MediaWiki
-
  - make direct or db a cmd line option w/ getopts
 
  - error reporting
+
+ - more details about memory banks / slots 
 
 

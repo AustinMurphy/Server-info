@@ -46,7 +46,7 @@ else
   
     #  Full list of actual repos
     REPOS=$(echo "$YUMREPOALL" | \
-        grep -v -E "^repo|^Load|^Updat|^This system|^ \*" | \
+        grep -v -E "^repo|^Load|^Updat|^This system|^Determi|^ \*" | \
         awk '{print $1}' )
     
     # Filtered list of repos
