@@ -31,7 +31,12 @@ then
 else
   #SSHCMD="ssh root@$SERVER "
   function ssh_cmd () {
+    # direct root
     ssh -o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 15"  root@$SERVER  ${1}
+
+    # root access via normal user w/ password-less sudo
+    #ssh -t -o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 15"  $USER@$SERVER "sudo ${1}"
+    #ssh -q -t  $USER@$SERVER "sudo ${1}"
   }
 fi
 
@@ -51,12 +56,17 @@ else
     
     # Filtered list of repos
     FILTEREDREPOS=$( echo "$REPOS" | \
-        grep -E -v "debug|source|testing|extras" | \
+        grep -E -v "beta|debug|extras|source|testing" | \
         sed -e  "s/^C[[:digit:]]\.[[:digit:]]-//" \
             -e "s/-i386-server//" \
             -e "s/-x86_64-server//" \
             -e "s/_x86_64_latest//" \
             -e "s/-5$//" \
+            -e "s/^rhel-6-server-rpms/base/" \
+            -e "s/^rhel-6-server-//" \
+            -e "s/^rhel-server-//" \
+            -e "s/^local-.*/local/" \
+            -e "s/-rpms$//" \
             -e "s/-indep$//" \
             -e "s/-specific//" \
             -e "s/^jpackage.*$/jpackage/" | \
