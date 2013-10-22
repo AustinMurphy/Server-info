@@ -2,7 +2,7 @@
 #
 #  Written by Austin Murphy, 2010 - 2012
 #
-#  Functions to retrieve system information from remote serversi (or localhost).
+#  Functions to retrieve system information from remote servers (or localhost).
 #
 #
 #  Note:  ROOT access via password-less SSH is required.  
@@ -34,13 +34,16 @@ YUM_REPO_TOOL="./get-yum-repos.sh"
 
 # dmidecode
 # cat /proc/meminfo
-# cat /etc/redhat-release  OR  cat /etc/debian_version
+# cat /etc/redhat-release  OR  cat /etc/debian_version  (oracle, gentoo)
 # uname -a
 # ifconfig -a
 # dig
 # df
 # mount
 # echo / grep / sed / awk / bc
+
+
+#echo "USER: $USER"
 
 # 
 # Allow local or remote servers as root or with sudo
@@ -49,7 +52,6 @@ if [[ "$SERVER" == "-l" || "$SERVER" == "localhost" ]]
 then
   if [[ "$UID" -eq 0 ]]
   then
-    #SSHCMD=""
     function ssh_cmd () {
       ${1}
     }
@@ -61,12 +63,20 @@ else
   # old syntax - couldn't deal with spaces in ssh command - bash advice is to use a function
   #SSHCMD="ssh root@$SERVER "
 
-  # SSHOPTS=(-o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 5")
-
   function ssh_cmd () {
+    # direct root
     ssh -o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 15"  root@$SERVER  ${1}
+
+    # root via normal user with password-less sudo 
+    #ssh -o "ControlMaster auto" -o "ControlPath /tmp/%h-%p-%r.ssh" -o "ControlPersist 15" -t $USER@$SERVER \'sudo ${1}\'
+    #ssh -t $USER@$SERVER sudo ${1}
   }
 fi
+
+# user + NOPASSWD: sudo on remote system  style
+# ssh -t $SERVER sudo ${1}
+
+
 
 # example usage:
 #SVRNAME=$( ssh_cmd "hostname -s" )
@@ -92,13 +102,7 @@ SVRNAME=""
 SVRDOMAIN=""
 
 function rtrv_name_info {
-  # old syntax - couldn't deal with spaces in ssh command - bash advice is to use a function
-  #SVRNAME=$( $SSHCMD hostname -s )
-  #SVRDOMAIN="$( $SSHCMD hostname -d)"
-  # This syntax works... maybe I should change to a function
-  SVRNAME=$(ssh "${SSHOPTS[@]}" root@$SERVER  hostname -s )
-  # 
-  #  This is nice
+
   SVRNAME=$( ssh_cmd "hostname -s" )
   SVRDOMAIN=$( ssh_cmd "hostname -d" )
  
@@ -126,9 +130,19 @@ function rtrv_platform_info {
   DMI_SERIAL=$( ssh_cmd "dmidecode -s system-serial-number")
 
   PLATFORM['manf']=$(echo "$DMI_MANF" | sed -e "s/ Inc.//" -e "s/ Computer Corporation//" -e "s/,//" -e "s/System Manufacturer/Generic/" -e "s/ Corporation//" )
-  PLATFORM['product']=$(echo "$DMI_PROD" | sed -e "s/VMware Virtual Platform/Virtual Machine/" -e "s/System Product Name/Server/" -e "s/ *$//")
-  PLATFORM['fwver']=$DMI_BIOS
-  PLATFORM['serial']=$(echo "$DMI_SERIAL" | sed -e "s/System Serial Number/---/" -e "s/^ *//" -e "s/ *$//")
+  PLATFORM['product']=$(echo "$DMI_PROD" | sed -e "s/VMware Virtual Platform/Virtual Machine/" \
+                          -e "s/System Product Name/Server/" \
+                          -e "s/ *$//" \
+                          -e "s/^ *IBM *//" \
+                          -e "s/System //" \
+                          -e "s/-\[/(/" -e "s/\]-/)/" )
+  PLATFORM['fwver']=$(echo "$DMI_BIOS" | sed -e "s/-\[//" -e "s/\]-//" -e "s/ *$//")
+  PLATFORM['serial']=$(echo "$DMI_SERIAL" | \
+      sed -e "s/System Serial Number/---/" \
+          -e "s/^ *//" \
+          -e "s/ *$//" \
+          -e "s/-\[//" \
+          -e "s/\]-//")
 
   # Check warranty expiration for Dell
   PLATFORM['warrexp']='X'
@@ -169,7 +183,11 @@ function rtrv_cpu_info {
     # processor-version contains good info
     CPUS['numfree']=$(echo "$DMIDECODE_CPU" | grep -E '00000000|Not Spec' | wc -l )
     CPUS['num']=$(echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec' | wc -l )
-    CPUINFO=$( echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec'  | head -n 1 | sed -e "s/(R)//g" -e "s/(TM)//g" -e "s/(tm)//g" )
+    CPUINFO=$( echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec'  | head -n 1 | \
+        sed -e "s/(R)//g" \
+            -e "s/(TM)//g" \
+            -e "s/(tm)//g" \
+            -e "s/ 0 \@/ @/" )
     CPUS['manf']=$(echo "$CPUINFO" | sed -e "s/ .*$//" )
     CPUS['fam']=$( echo "$CPUINFO" | sed -e "s/^\S* //" -e "s/ *\@.*$//" -e "s/CPU *//" )
     CPUS['freq']=$(echo "$CPUINFO" | sed -e "s/^.*\@ //" -e "s/GHz/ GHz/" )
@@ -180,13 +198,20 @@ function rtrv_cpu_info {
 
     DMI_PROC_MANF=$( ssh_cmd "dmidecode -s processor-manufacturer | sed -e \"s/ *$//\"")
     DMI_PROC_FAM=$(  ssh_cmd "dmidecode -s processor-family       | sed -e \"s/ *$//\"")
+    DMI_PROC_VER=$(  ssh_cmd "dmidecode -s processor-version      | sed -e \"s/ *$//\"")
     DMI_PROC_FREQ=$( ssh_cmd "dmidecode -s processor-frequency    | sed -e \"s/ *$//\"")
  
     CPUS['num']=$(echo "$DMI_PROC_MANF" | grep -E -v '00000000|Not Spec' | wc -l)
     NUMTOTAL=$(echo "$DMIDECODE" | grep "Socket Designation" | grep -E "CPU|PROC" | wc -l)
     CPUS['numfree']=$(echo "$NUMTOTAL-${CPUS['num']}" | bc)
     CPUS['manf']=$(echo "$DMI_PROC_MANF" | head -n 1 | sed -e "s/Genuine//" )
-    CPUS['fam']=$(echo "$DMI_PROC_FAM" | head -n 1 )
+
+    if [ ${CPUS['manf']} == "AMD" ] 
+    then
+      CPUS['fam']=$(echo "$DMI_PROC_VER" | head -n 1 | sed -e "s/AMD //" -e "s/(TM)//" -e "s/Processor //")
+    else
+      CPUS['fam']=$(echo "$DMI_PROC_FAM" | head -n 1 )
+    fi
     CPUS['freq']=$(echo "$DMI_PROC_FREQ" | head -n 1 )
   fi
 
@@ -227,11 +252,8 @@ declare -A OS
 
 function rtrv_os_info {
 
-  # Future fun ...
-  #DEBVER=$( ssh_cmd "cat /etc/debian_version 2> /dev/null")
-
-  # TODO:  check for  /etc/debian_version
- 
+  DEBVER=$( ssh_cmd "cat /etc/debian_version 2> /dev/null")
+  GENREL=$( ssh_cmd "cat /etc/gentoo-release 2> /dev/null")
   ORAREL=$( ssh_cmd "cat /etc/oracle-release 2> /dev/null")
   RHREL=$( ssh_cmd "cat /etc/redhat-release 2> /dev/null")
   LARCH=$( ssh_cmd "uname -m")
@@ -239,6 +261,8 @@ function rtrv_os_info {
   
 
   OS['brand']="Unknown"
+
+  # RHEL & Clones
   echo "$RHREL" | grep -q "Red Hat Enterprise Linux" 
   if  [ $? == '0' ]
   then
@@ -257,8 +281,28 @@ function rtrv_os_info {
   fi
 
   OS['product']=$(echo "$RHREL" | sed -e "s/Red Hat Enterprise Linux//" -e "s/CentOS/Linux/" -e "s/release.*$//" -e "s/  / /g" -e "s/^ *//" -e "s/ *$//")
+  OS['ver']=$(echo "$RHREL" | sed -e "s/[a-zA-Z()]//g" -e "s/\([0-9]\) *\([0-9][0-9]?\)/\1.\2/" -e "s/^ *//" -e "s/ *$//" )
 
-  OS['ver']=$(echo "$RHREL" | sed -e "s/[a-zA-Z()]//g" -e "s/\([0-9]\) *\([0-9]\)/\1.\2/" -e "s/^ *//" -e "s/ *$//" )
+
+  # Gentoo
+  echo "$GENREL" | grep -q "Gentoo" 
+  if  [ $? == '0' ]
+  then
+    OS['brand']="Gentoo"
+    OS['product']=$(echo "$GENREL" | sed -e "s/Gentoo//" -e "s/release.*$//" -e "s/  / /g" -e "s/^ *//" -e "s/ *$//")
+    OS['ver']=$(echo "$GENREL" | sed -e "s/[a-zA-Z()]//g" -e "s/\([0-9]\) *\([0-9][0-9]?\)/\1.\2/" -e "s/^ *//" -e "s/ *$//" )
+  fi
+
+
+  # Debian
+  echo "$DEBVER" | grep -q -E "wheezy|jessie|sid" 
+  if  [ $? == '0' ]
+  then
+    OS['brand']="Debian"
+    OS['product']=""
+    OS['ver']="$DEBVER"
+  fi
+
 
   OS['arch']=$LARCH
 
