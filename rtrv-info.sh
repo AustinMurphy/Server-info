@@ -181,9 +181,9 @@ function rtrv_cpu_info {
     # new style
     # assumes that all procs are the same
     # processor-version contains good info
-    CPUS['numfree']=$(echo "$DMIDECODE_CPU" | grep -E '00000000|Not Spec' | wc -l )
-    CPUS['num']=$(echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec' | wc -l )
-    CPUINFO=$( echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec'  | head -n 1 | \
+    CPUS['numfree']=$(echo "$DMIDECODE_CPU" | grep -E '00000000|Not Spec|Unknown Processor' | wc -l )
+    CPUS['num']=$(echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec|Unknown Processor' | wc -l )
+    CPUINFO=$( echo "$DMIDECODE_CPU" | grep -E -v '00000000|Not Spec|Unknown Processor'  | head -n 1 | \
         sed -e "s/(R)//g" \
             -e "s/(TM)//g" \
             -e "s/(tm)//g" \
@@ -201,7 +201,7 @@ function rtrv_cpu_info {
     DMI_PROC_VER=$(  ssh_cmd "dmidecode -s processor-version      | sed -e \"s/ *$//\"")
     DMI_PROC_FREQ=$( ssh_cmd "dmidecode -s processor-frequency    | sed -e \"s/ *$//\"")
  
-    CPUS['num']=$(echo "$DMI_PROC_MANF" | grep -E -v '00000000|Not Spec' | wc -l)
+    CPUS['num']=$(echo "$DMI_PROC_MANF" | grep -E -v '00000000|Not Spec|Unknown Processor' | wc -l)
     NUMTOTAL=$(echo "$DMIDECODE" | grep "Socket Designation" | grep -E "CPU|PROC" | wc -l)
     CPUS['numfree']=$(echo "$NUMTOTAL-${CPUS['num']}" | bc)
     CPUS['manf']=$(echo "$DMI_PROC_MANF" | head -n 1 | sed -e "s/Genuine//" )
